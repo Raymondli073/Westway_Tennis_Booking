@@ -38,6 +38,9 @@ app/
 tests/                # pytest test suite
 ```
 
+## Claude Code Instructions
+- **Always update this CLAUDE.md file to reflect the latest project state whenever making git commits.**
+
 ## Key Conventions
 - Use Flask blueprints for route organisation
 - SQLAlchemy ORM for all database access
