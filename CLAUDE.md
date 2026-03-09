@@ -20,6 +20,20 @@ the next 7 days, then sends an email alert when slots are found.
 - Subscribers stored in `subscribers.db` (SQLite, gitignored)
 - Logs written to `monitor.log` (gitignored)
 
+## WeChat Mini Program
+- Code in `miniprogram/` — open this folder in WeChat DevTools
+- Set real AppID in `miniprogram/project.config.json` (get from mp.weixin.qq.com)
+- For local dev: DevTools → 详情 → 本地设置 → 不校验合法域名
+- For production: deploy backend to HTTPS, update `app.js` `apiBase` and `BASE_URL` in `.env`
+- Mini Program calls: `POST /api/subscribe`, `POST /api/unsubscribe`, `GET /api/stats`
+
+### 发布步骤
+1. 登录 mp.weixin.qq.com 注册小程序，获取 AppID
+2. 部署后端到有 HTTPS 的服务器（如阿里云/腾讯云）
+3. 在微信公众平台 → 开发 → 开发设置 → 服务器域名，填写后端域名
+4. 更新 `miniprogram/app.js` 中 `apiBase` 为公网 HTTPS 地址
+5. 微信开发者工具上传代码 → 提交审核 → 发布
+
 ## Web App Routes
 - `GET /` — landing page with email subscribe form + subscriber count
 - `POST /subscribe` — add email to subscribers

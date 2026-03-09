@@ -1,0 +1,40 @@
+.page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 40rpx;
+}
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 70rpx 48rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 24rpx rgba(0,0,0,.08);
+  width: 100%;
+}
+.icon  { font-size: 100rpx; display: block; margin-bottom: 30rpx; }
+.title {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #006633;
+  display: block;
+  margin-bottom: 20rpx;
+}
+.body {
+  font-size: 28rpx;
+  color: #555;
+  line-height: 1.7;
+  display: block;
+  margin-bottom: 56rpx;
+}
+.btn-back {
+  background: #006633;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 14rpx;
+  height: 90rpx;
+  line-height: 90rpx;
+  border: none;
+}

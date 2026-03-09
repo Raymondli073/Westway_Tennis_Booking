@@ -1,0 +1,74 @@
+<!-- 首页：订阅表单 -->
+<view class="page">
+
+  <!-- Hero 区域 -->
+  <view class="hero">
+    <text class="hero-icon">🎾</text>
+    <text class="hero-title">Westway 网球空档提醒</text>
+    <text class="hero-sub">伦敦 Westway 室内球场 · 连续时段优先提醒</text>
+  </view>
+
+  <!-- 订阅卡片 -->
+  <view class="card">
+    <text class="card-title">订阅邮件提醒</text>
+    <text class="card-desc">输入邮箱，当未来 7 天内出现连续 2 小时以上的可预订空档时，我们将第一时间发邮件通知您。</text>
+
+    <view class="input-wrap {{focused ? 'focused' : ''}}">
+      <text class="input-icon">✉️</text>
+      <input
+        class="email-input"
+        type="text"
+        placeholder="your@email.com"
+        placeholder-class="placeholder"
+        value="{{email}}"
+        bindinput="onEmailInput"
+        bindfocus="onFocus"
+        bindblur="onBlur"
+        confirm-type="done"
+        bindconfirm="onSubscribe"
+      />
+    </view>
+
+    <button
+      class="btn-subscribe {{loading ? 'loading' : ''}}"
+      bindtap="onSubscribe"
+      disabled="{{loading}}"
+    >
+      <text wx:if="{{!loading}}">立即订阅</text>
+      <text wx:else>订阅中...</text>
+    </button>
+
+    <text class="hint">不会收到垃圾邮件 · 每封邮件附退订链接</text>
+  </view>
+
+  <!-- 功能说明 -->
+  <view class="feature-grid">
+    <view class="feature-item">
+      <text class="feature-icon">🕐</text>
+      <text class="feature-title">每 30 分钟检查</text>
+      <text class="feature-desc">英国时间 9am–凌晨，全天监控</text>
+    </view>
+    <view class="feature-item">
+      <text class="feature-icon">⏱</text>
+      <text class="feature-title">仅推送连续时段</text>
+      <text class="feature-desc">至少 2 小时连续可用才发提醒</text>
+    </view>
+    <view class="feature-item">
+      <text class="feature-icon">🏟</text>
+      <text class="feature-title">7 块室内球场</text>
+      <text class="feature-desc">全部 Indoor Acrylic 球场实时监控</text>
+    </view>
+    <view class="feature-item">
+      <text class="feature-icon">📧</text>
+      <text class="feature-title">邮件即时提醒</text>
+      <text class="feature-desc">含时间表、连续时段高亮标注</text>
+    </view>
+  </view>
+
+  <!-- 订阅人数 -->
+  <view class="stat-bar">
+    <text class="stat-num">{{count}}</text>
+    <text class="stat-label"> 位用户正在接收提醒</text>
+  </view>
+
+</view>

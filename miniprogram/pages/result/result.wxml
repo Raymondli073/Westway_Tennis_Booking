@@ -1,0 +1,8 @@
+<view class="page">
+  <view class="card">
+    <text class="icon">{{icon}}</text>
+    <text class="title">{{title}}</text>
+    <text class="body">{{body}}</text>
+    <button class="btn-back" bindtap="goHome">返回首页</button>
+  </view>
+</view>
