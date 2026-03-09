@@ -55,7 +55,9 @@ requirements.txt         # Python dependencies
 Each slot dict: `{date, time, activity, courts_note, url}`
 - `activity`: "Indoor Tennis (50 Mins)" or "Indoor Tennis Early Bird"
 - `courts_note`: fixed string — court numbers are only assigned at checkout, not shown in the grid
+- Slots are deduplicated by (date, time) before emailing — overlapping slots from different activities are merged
 - Slots are sorted chronologically (date then time) before emailing
+- Email subject and count reflect distinct slots only
 
 ## Booking System Navigation (Discovered via Playwright inspection)
 - Login: `mrmLogin.aspx?siteId=0162` — fields: `#ctl00_MainContent_InputLogin`, `#ctl00_MainContent_InputPassword`

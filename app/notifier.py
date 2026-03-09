@@ -11,14 +11,23 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 
-def _sort_slots(slots: list[dict]) -> list[dict]:
-    """Sort slots chronologically by date then time."""
+def _sort_and_dedup_slots(slots: list[dict]) -> list[dict]:
+    """Deduplicate by (date, time), keeping the first occurrence, then sort chronologically."""
+    seen: set[tuple] = set()
+    unique = []
+    for s in slots:
+        key = (s["date"], s["time"])
+        if key not in seen:
+            seen.add(key)
+            unique.append(s)
+
     def sort_key(s: dict):
         try:
             return datetime.strptime(f"{s['date']} {s['time']}", "%A %d %B %Y %H:%M")
         except ValueError:
             return datetime.max
-    return sorted(slots, key=sort_key)
+
+    return sorted(unique, key=sort_key)
 
 
 def _build_html(slots: list[dict]) -> str:
@@ -108,8 +117,8 @@ def send_alert(
     if not slots:
         return False
 
-    sorted_slots = _sort_slots(slots)
-    subject = f"[Westway Tennis] {len(slots)} slot(s) available — Book Now!"
+    sorted_slots = _sort_and_dedup_slots(slots)
+    subject = f"[Westway Tennis] {len(sorted_slots)} slot(s) available — Book Now!"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -128,7 +137,7 @@ def send_alert(
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.sendmail(smtp_user, to_address, msg.as_string())
-        print(f"[notifier] Alert sent to {to_address} ({len(slots)} slot(s))")
+        print(f"[notifier] Alert sent to {to_address} ({len(sorted_slots)} distinct slot(s))")
         return True
     except Exception as e:
         print(f"[notifier] Failed to send email: {e}")
