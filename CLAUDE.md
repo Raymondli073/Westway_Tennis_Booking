@@ -1,7 +1,9 @@
 # Westway Tennis Booking — Claude Code Guide
 
 ## Project Overview
-Tennis court slot booking system for Westway Sports Centre. Built with Python/Flask, SQLite (dev) / PostgreSQL (prod).
+Automated monitor that scrapes the EveryoneActive booking system for available
+indoor tennis court slots at Westway Sports & Fitness Centre (London) within
+the next 7 days, then sends an email alert when slots are found.
 
 ## Repository
 - GitHub: https://github.com/Raymondli073/Westway_Tennis_Booking
@@ -11,38 +13,51 @@ Tennis court slot booking system for Westway Sports Centre. Built with Python/Fl
 - Always use git feature branches for new features
 - Commit with descriptive messages following conventional commits style
 - Push to GitHub and open PRs for review before merging to `main`
+- **Always update this CLAUDE.md file to reflect the latest project state whenever making git commits.**
 
 ## Stack
-- **Backend:** Python / Flask
-- **Database:** SQLite (dev), PostgreSQL (prod)
-- **Frontend:** HTML / CSS / JavaScript (Jinja2 templates)
-- **Auth:** Flask-Login
+- **Scraping:** Playwright (Chromium, headless)
+- **Scheduling:** APScheduler (BlockingScheduler)
+- **Email:** Python smtplib + Gmail SMTP + App Password
+- **Config:** python-dotenv (.env file)
+- **Python:** 3.8+
 
 ## Environment
-- Python virtual environment: `.venv/`
-- Run dev server: `flask run`
-- Run tests: `pytest`
-- Dependencies: `requirements.txt`
+- Virtual environment: `.venv/` — activate with `source .venv/bin/activate`
+- Install deps: `pip install -r requirements.txt`
+- Install browser: `playwright install chromium`
+- Configure: copy `.env.example` → `.env` and fill in credentials
+- Run once: `python main.py`
+- Run on schedule (every 30 min): `python main.py --schedule`
+- Run on custom interval: `python main.py --schedule --interval 15`
 
 ## Project Structure
 ```
+main.py                  # Entry point — CLI, scheduler setup
 app/
-├── __init__.py       # App factory
-├── models.py         # SQLAlchemy models
-├── routes/           # Blueprint route handlers
-│   ├── auth.py
-│   ├── bookings.py
-│   └── admin.py
-├── templates/        # Jinja2 HTML templates
-└── static/           # CSS, JS, images
-tests/                # pytest test suite
+├── __init__.py
+├── scraper.py           # Playwright scraper — logs in, checks slots per day
+├── notifier.py          # Gmail SMTP email alert builder + sender
+└── monitor.py           # Orchestrator — deduplicates alerts via .seen_slots.json
+.env.example             # Template for credentials (never commit .env)
+requirements.txt         # Python dependencies
+.seen_slots.json         # Runtime cache (auto-created, gitignored)
 ```
 
-## Claude Code Instructions
-- **Always update this CLAUDE.md file to reflect the latest project state whenever making git commits.**
-
 ## Key Conventions
-- Use Flask blueprints for route organisation
-- SQLAlchemy ORM for all database access
-- Environment variables via `.env` (never commit secrets)
-- `flask db migrate` / `flask db upgrade` for schema changes (Flask-Migrate)
+- Credentials via `.env` only — never committed to git
+- `.seen_slots.json` tracks already-alerted slots to prevent duplicate emails
+- `HEADLESS=false` in `.env` to watch the browser during debugging
+- Gmail SMTP requires a 16-char App Password (not your normal Gmail password)
+  → Google Account → Security → 2-Step Verification → App Passwords
+
+## Required .env Variables
+| Variable        | Description                                      |
+|-----------------|--------------------------------------------------|
+| EA_EMAIL        | EveryoneActive login email                       |
+| EA_PASSWORD     | EveryoneActive login password                    |
+| NOTIFY_EMAIL    | Recipient email (default: Raymondli073@gmail.com)|
+| SMTP_USER       | Gmail address used to send alerts                |
+| SMTP_PASSWORD   | Gmail App Password (16 chars)                    |
+| DAYS_AHEAD      | Days to check ahead (default: 7)                 |
+| HEADLESS        | true/false — hide/show browser (default: true)   |

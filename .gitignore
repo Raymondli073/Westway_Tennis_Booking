@@ -46,3 +46,5 @@ npm-debug.log*
 htmlcov/
 .pytest_cache/
 .tox/
+.seen_slots.json
+.env
