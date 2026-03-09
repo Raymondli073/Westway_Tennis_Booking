@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block title %}Westway Tennis Alerts — Subscribe{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h1>Get Court Alerts</h1>
+  <p class="lead">
+    Enter your email and we'll notify you whenever <strong>2+ consecutive indoor
+    tennis hours</strong> open up at Westway within the next 7 days.
+  </p>
+
+  {% if message %}
+    <div class="alert alert-{{ message_type }}">{{ message }}</div>
+  {% endif %}
+
+  <form method="POST" action="/subscribe" class="subscribe-form">
+    <input
+      type="email"
+      name="email"
+      placeholder="your@email.com"
+      required
+      autocomplete="email"
+      class="email-input"
+    >
+    <button type="submit" class="btn-subscribe">Notify me</button>
+  </form>
+
+  <p class="hint">No spam — only real consecutive slot alerts. Unsubscribe any time via the link in each email.</p>
+</div>
+
+<div class="info-grid">
+  <div class="info-card">
+    <div class="info-icon">🕐</div>
+    <div class="info-title">Checked every 30 min</div>
+    <div class="info-body">Between 9am and midnight UK time, every day.</div>
+  </div>
+  <div class="info-card">
+    <div class="info-icon">⏱</div>
+    <div class="info-title">Consecutive slots only</div>
+    <div class="info-body">Alerts fire only when 2+ back-to-back hours are available.</div>
+  </div>
+  <div class="info-card">
+    <div class="info-icon">🎾</div>
+    <div class="info-title">Indoor courts</div>
+    <div class="info-body">Monitors all 7 indoor acrylic courts at Westway.</div>
+  </div>
+</div>
+
+<div class="stat">
+  <strong>{{ subscriber_count }}</strong> subscriber{{ 's' if subscriber_count != 1 else '' }} currently receiving alerts
+</div>
+{% endblock %}

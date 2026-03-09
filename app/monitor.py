@@ -1,7 +1,7 @@
 """
 Core monitor — ties together the scraper and notifier.
-Tracks previously seen consecutive blocks to avoid duplicate alerts.
-Only sends an email when at least one consecutive block (2+ hours) is detected.
+Sends alerts only when new consecutive blocks are found.
+Emails all subscribers in the database with personalised unsubscribe links.
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ import os
 from pathlib import Path
 
 from app.scraper  import get_available_slots
-from app.notifier import send_alert, _sort_and_dedup_slots, _find_consecutive_blocks
+from app.notifier import send_alerts, _sort_and_dedup_slots, _find_consecutive_blocks
+from app.db       import get_all_emails, init_db
 
 
-# Persists already-alerted consecutive blocks between runs
 SEEN_CACHE = Path(__file__).parent.parent / ".seen_slots.json"
 
 
@@ -42,25 +42,31 @@ def run_check(config: dict) -> int:
     Sends an alert only when new consecutive blocks (2+ hours) are found.
     Returns the number of NEW consecutive blocks alerted on.
     """
+    init_db()
+    recipients = get_all_emails()
+
+    if not recipients:
+        print("[monitor] No subscribers — skipping check.")
+        return 0
+
     ea_email    = config["EA_EMAIL"]
     ea_password = config["EA_PASSWORD"]
-    to_email    = config["NOTIFY_EMAIL"]
     smtp_user   = config["SMTP_USER"]
     smtp_pass   = config["SMTP_PASSWORD"]
+    base_url    = config.get("BASE_URL", "http://localhost:5000")
     days_ahead  = int(config.get("DAYS_AHEAD", 7))
     headless    = config.get("HEADLESS", "true").lower() != "false"
 
-    print("[monitor] Starting availability check…")
+    print(f"[monitor] Starting check ({len(recipients)} subscriber(s))…")
 
-    raw_slots   = asyncio.run(get_available_slots(ea_email, ea_password, days_ahead, headless))
-    slots       = _sort_and_dedup_slots(raw_slots)
-    highlight   = _find_consecutive_blocks(slots)
+    raw_slots = asyncio.run(get_available_slots(ea_email, ea_password, days_ahead, headless))
+    slots     = _sort_and_dedup_slots(raw_slots)
+    highlight = _find_consecutive_blocks(slots)
 
     if not highlight:
-        print("[monitor] No consecutive blocks found — skipping email.")
+        print("[monitor] No consecutive blocks — skipping email.")
         return 0
 
-    # Find distinct consecutive blocks
     seen = _load_seen()
     new_blocks: set[str] = set()
     for (date, _), label in highlight.items():
@@ -72,9 +78,9 @@ def run_check(config: dict) -> int:
         print("[monitor] No NEW consecutive blocks — skipping email.")
         return 0
 
-    print(f"[monitor] {len(new_blocks)} new consecutive block(s) found — sending alert.")
-    sent = send_alert(slots, to_email, smtp_user, smtp_pass)
-    if sent:
+    print(f"[monitor] {len(new_blocks)} new block(s) — alerting {len(recipients)} subscriber(s).")
+    sent = send_alerts(slots, recipients, smtp_user, smtp_pass, base_url)
+    if sent > 0:
         seen.update(new_blocks)
         _save_seen(seen)
 

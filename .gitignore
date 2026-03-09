@@ -50,3 +50,4 @@ htmlcov/
 .env
 .monitor.pid
 monitor.log
+subscribers.db

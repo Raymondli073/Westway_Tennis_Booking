@@ -10,13 +10,24 @@ the next 7 days, then sends an email alert when slots are found.
 - Default branch: `main`
 
 ## Running the App
-- **Launch:** `./launch.sh` or `./launch.sh start`
+- **Launch:** `./launch.sh` — starts web app + scheduler in background
 - **Stop:** `./launch.sh stop`
 - **Status/logs:** `./launch.sh status`
-- Runs every 30 min, **09:00–00:00 UK time only** (Europe/London timezone)
-- Emails sent **only when consecutive blocks (2+ hours) are found**
-- Logs written to `monitor.log`
-- PID tracked in `.monitor.pid` (gitignored)
+- **Port:** 8080 (macOS port 5000 reserved by AirPlay)
+- Web app: `http://localhost:8080` — subscribe/unsubscribe page
+- Scheduler: every 30 min, **09:00–00:00 UK time** (Europe/London)
+- Emails sent **only when new consecutive blocks (2+ hours) are detected**
+- Subscribers stored in `subscribers.db` (SQLite, gitignored)
+- Logs written to `monitor.log` (gitignored)
+
+## Web App Routes
+- `GET /` — landing page with email subscribe form + subscriber count
+- `POST /subscribe` — add email to subscribers
+- `GET /unsubscribe?token=<token>` — remove subscriber (link in every email)
+
+## Multi-subscriber Email Flow
+Each subscriber gets an individual email with a personalised unsubscribe token.
+`BASE_URL` in `.env` controls the unsubscribe link domain (update when deploying publicly).
 
 ## Workflow
 - Always use git feature branches for new features

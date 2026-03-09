@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Westway Tennis Alerts{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🎾</span>
+        <div>
+          <div class="logo-title">Westway Tennis Alerts</div>
+          <div class="logo-sub">Westway Sports &amp; Fitness Centre, London</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    <p>Checks every 30 min &bull; 09:00–00:00 UK time &bull; Alerts only on 2+ consecutive hours</p>
+  </footer>
+</body>
+</html>

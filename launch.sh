@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────
 #  Westway Tennis Monitor — launcher
-#  Runs the monitor in the background, logs to monitor.log
-#  Usage: ./launch.sh          (start)
-#         ./launch.sh stop     (stop)
-#         ./launch.sh status   (check if running)
+#  Usage: ./launch.sh [start|stop|status|restart]
 # ─────────────────────────────────────────────────────────────
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PIDFILE="$DIR/.monitor.pid"
 VENV="$DIR/.venv/bin/activate"
 LOG="$DIR/monitor.log"
+PORT="${PORT:-8080}"
 
 start() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
         echo "Monitor is already running (PID $(cat "$PIDFILE"))."
+        echo "Web app: http://localhost:$PORT"
         exit 0
     fi
 
     echo "Starting Westway Tennis Monitor..."
     source "$VENV"
-    nohup python "$DIR/main.py" --schedule >> "$LOG" 2>&1 &
+    nohup python "$DIR/main.py" --port "$PORT" >> "$LOG" 2>&1 &
     echo $! > "$PIDFILE"
-    echo "Started (PID $!). Logs: $LOG"
+    sleep 2
+    echo "Started (PID $!)."
+    echo "Web app: http://localhost:$PORT"
+    echo "Logs:    $LOG"
 }
 
 stop() {
@@ -43,17 +45,20 @@ stop() {
 
 status() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-        echo "Monitor is running (PID $(cat "$PIDFILE"))."
-        echo "Last 5 log lines:"
-        tail -5 "$LOG"
+        echo "Monitor is RUNNING (PID $(cat "$PIDFILE"))."
+        echo "Web app: http://localhost:$PORT"
+        echo ""
+        echo "Last 10 log lines:"
+        tail -10 "$LOG"
     else
-        echo "Monitor is not running."
+        echo "Monitor is NOT running."
     fi
 }
 
 case "${1:-start}" in
-    start)  start  ;;
-    stop)   stop   ;;
-    status) status ;;
-    *)      echo "Usage: $0 {start|stop|status}" ; exit 1 ;;
+    start)   start   ;;
+    stop)    stop    ;;
+    status)  status  ;;
+    restart) stop; sleep 1; start ;;
+    *)       echo "Usage: $0 {start|stop|status|restart}"; exit 1 ;;
 esac
