@@ -9,6 +9,15 @@ the next 7 days, then sends an email alert when slots are found.
 - GitHub: https://github.com/Raymondli073/Westway_Tennis_Booking
 - Default branch: `main`
 
+## Running the App
+- **Launch:** `./launch.sh` or `./launch.sh start`
+- **Stop:** `./launch.sh stop`
+- **Status/logs:** `./launch.sh status`
+- Runs every 30 min, **09:00–00:00 UK time only** (Europe/London timezone)
+- Emails sent **only when consecutive blocks (2+ hours) are found**
+- Logs written to `monitor.log`
+- PID tracked in `.monitor.pid` (gitignored)
+
 ## Workflow
 - Always use git feature branches for new features
 - Commit with descriptive messages following conventional commits style

@@ -48,3 +48,5 @@ htmlcov/
 .tox/
 .seen_slots.json
 .env
+.monitor.pid
+monitor.log
