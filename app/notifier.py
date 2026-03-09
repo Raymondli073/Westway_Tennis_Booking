@@ -3,6 +3,8 @@ Email notifier — sends an alert when Westway indoor tennis slots are available
 Uses Gmail SMTP with an App Password (no OAuth required).
 """
 
+from __future__ import annotations
+
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -78,6 +80,9 @@ def send_alert(
 
     msg.attach(MIMEText(_build_plain(slots), "plain"))
     msg.attach(MIMEText(_build_html(slots),  "html"))
+
+    # Google App Passwords may be written with dashes/spaces for readability
+    smtp_password = smtp_password.replace("-", "").replace(" ", "")
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:

@@ -51,6 +51,18 @@ requirements.txt         # Python dependencies
 - Gmail SMTP requires a 16-char App Password (not your normal Gmail password)
   → Google Account → Security → 2-Step Verification → App Passwords
 
+## Booking System Navigation (Discovered via Playwright inspection)
+- Login: `mrmLogin.aspx?siteId=0162` — fields: `#ctl00_MainContent_InputLogin`, `#ctl00_MainContent_InputPassword`
+- Activity group: `input[value='Tennis Courts']` → ActivityID=162TENNIS
+- Indoor activities: `Indoor Tennis (50 Mins)`, `Indoor Tennis Early Bird`
+- Slot grid: `mrmResourceStatus.aspx` — each slot button has `data-qa-id` with date/time/availability
+- Available slots: buttons without `disabled="disabled"` attribute
+- Week navigation: `#ctl00_MainContent_dateForward1` button
+
+## Gmail App Password Note
+- Google App Passwords may be written with dashes (e.g. `xxxx-xxxx-xxxx-xxxx`) for readability
+- The notifier strips dashes/spaces automatically before authenticating
+
 ## Required .env Variables
 | Variable        | Description                                      |
 |-----------------|--------------------------------------------------|

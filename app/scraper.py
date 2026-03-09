@@ -1,104 +1,177 @@
 """
 Westway indoor tennis court availability scraper.
-Logs into EveryoneActive and checks for bookable slots in the next 7 days.
+
+Flow:
+  Login → Make a Booking → Tennis Courts
+        → Indoor Tennis (50 Mins)       [ActivityID=162TENNIS]
+        → Indoor Tennis Early Bird      [ActivityID=162TENN050OD002]
+  Parse the weekly slot grid (Mon–Sun).
+  Navigate forward one week if needed to cover `days_ahead` days.
 """
 
-import asyncio
+from __future__ import annotations
+
 import re
 from datetime import datetime, timedelta
 
 from playwright.async_api import async_playwright, Page, TimeoutError as PWTimeout
 
 
-CONNECT_BASE = "https://book.everyoneactive.com/Connect"
-LOGIN_URL     = f"{CONNECT_BASE}/mrmLogin.aspx?siteId=0162"
-SLOTS_URL     = f"{CONNECT_BASE}/mrmResourceStatus.aspx?siteId=0162"
+LOGIN_URL     = "https://book.everyoneactive.com/Connect/mrmLogin.aspx?siteId=0162"
+BOOKING_URL   = "https://book.everyoneactive.com/Connect/mrmResourceStatus.aspx"
+
+INDOOR_ACTIVITIES = [
+    "Indoor Tennis (50 Mins)",
+    "Indoor Tennis Early Bird",
+]
 
 
 async def _login(page: Page, email: str, password: str) -> bool:
-    """Log into the EveryoneActive Connect booking system."""
     await page.goto(LOGIN_URL, wait_until="networkidle", timeout=30000)
-
-    # Fill credentials
-    email_sel    = 'input[id*="email" i], input[name*="email" i], input[type="email"]'
-    password_sel = 'input[id*="pass" i], input[name*="pass" i], input[type="password"]'
-    submit_sel   = 'input[type="submit"], button[type="submit"], a:has-text("Login"), a:has-text("Sign in")'
-
-    await page.fill(email_sel, email)
-    await page.fill(password_sel, password)
-    await page.click(submit_sel)
+    await page.fill("#ctl00_MainContent_InputLogin",    email)
+    await page.fill("#ctl00_MainContent_InputPassword", password)
+    await page.click("#ctl00_MainContent_btnLogin")
 
     try:
-        # Wait until we're no longer on a login page
-        await page.wait_for_function(
-            "() => !window.location.href.toLowerCase().includes('login')",
+        await page.wait_for_url(
+            lambda url: "login" not in url.lower(),
             timeout=15000,
         )
         return True
     except PWTimeout:
-        # Check if we're still on login (wrong creds) vs. navigated
-        if "login" in page.url.lower():
-            print("[scraper] Login failed — check credentials.")
-            return False
-        return True
+        return "login" not in page.url.lower()
 
 
-async def _slots_for_date(page: Page, date: datetime.date) -> list[dict]:
-    """Navigate to the slots page for a specific date and parse available courts."""
-    url = f"{SLOTS_URL}&date={date.strftime('%Y-%m-%d')}&type=tennis"
+async def _navigate_to_activity(page: Page, activity_name: str) -> bool:
+    """Navigate from home → Tennis Courts → specific activity."""
     try:
-        await page.goto(url, wait_until="networkidle", timeout=20000)
-    except PWTimeout:
-        print(f"[scraper] Timeout loading {url}")
-        return []
+        await page.click("text=Make a Booking")
+        await page.wait_for_load_state("networkidle", timeout=15000)
 
+        await page.click("input[value='Tennis Courts']")
+        await page.wait_for_load_state("networkidle", timeout=15000)
+
+        await page.click(f"input[value='{activity_name}']")
+        await page.wait_for_load_state("networkidle", timeout=15000)
+        return True
+    except Exception as e:
+        print(f"[scraper] Navigation error for {activity_name!r}: {e}")
+        return False
+
+
+def _parse_grid(page_html: str, activity_name: str, booking_url: str) -> list[dict]:
+    """
+    Parse the slot grid from the page HTML.
+
+    Each slot button has a data-qa-id like:
+      button-ActivityID=162TENNIS Date=09/03/2026 06:00:00 Availability= Available
+    Available slots do NOT have disabled="disabled".
+    """
     slots = []
-    date_label = date.strftime("%A %d %B %Y")
 
-    # ── Strategy 1: look for explicit availability cells / buttons ──────────
-    available_els = await page.query_selector_all(
-        "td.available, .slot-available, .activity-slot.available, "
-        "[class*='available']:not([class*='un']):not([class*='not'])"
+    # Find all slot buttons that are NOT disabled
+    # Pattern: data-qa-id="button-ActivityID=... Date=DD/MM/YYYY HH:MM:SS Availability= <status>"
+    pattern = re.compile(
+        r'data-qa-id="button-ActivityID=\S+\s+Date=(\d{2}/\d{2}/\d{4})\s+(\d{2}:\d{2}):\d{2}\s+Availability=\s*([^"]+)"'
     )
-    for el in available_els:
-        text = (await el.inner_text()).strip()
-        time_m = re.search(r"\b\d{1,2}[:.]\d{2}(?:\s*[ap]m)?\b", text, re.I)
-        court_m = re.search(r"court\s*\d+|indoor|pitch\s*\d+", text, re.I)
+
+    # Find buttons and whether they are disabled
+    button_pattern = re.compile(
+        r'<input[^>]*?(?P<disabled>disabled="disabled")?[^>]*?'
+        r'data-qa-id="button-ActivityID=\S+\s+Date=(?P<date>\d{2}/\d{2}/\d{4})\s+'
+        r'(?P<time>\d{2}:\d{2}):\d{2}\s+Availability=\s*(?P<avail>[^"]+)"',
+        re.DOTALL,
+    )
+
+    for m in button_pattern.finditer(page_html):
+        if m.group("disabled"):
+            continue  # slot is not bookable
+        avail = m.group("avail").strip()
+        if "not available" in avail.lower() or "unavailable" in avail.lower():
+            continue
+
+        raw_date = m.group("date")          # DD/MM/YYYY
+        raw_time = m.group("time")          # HH:MM
+        try:
+            dt = datetime.strptime(raw_date, "%d/%m/%Y")
+            date_label = dt.strftime("%A %d %B %Y")
+        except ValueError:
+            date_label = raw_date
+
         slots.append({
-            "date":   date_label,
-            "time":   time_m.group(0) if time_m else "See website",
-            "court":  court_m.group(0) if court_m else "Indoor Tennis Court",
-            "url":    page.url,
+            "date":     date_label,
+            "time":     raw_time,
+            "court":    activity_name,
+            "url":      booking_url,
         })
 
-    # ── Strategy 2: fallback — any visible "Book" links with a time nearby ──
-    if not slots:
-        book_links = await page.query_selector_all(
-            "a:has-text('Book'), button:has-text('Book')"
-        )
-        for link in book_links:
-            try:
-                # Walk up the DOM to get the row/container text
-                container_text = await link.evaluate(
-                    "el => {"
-                    "  let node = el.closest('tr') || el.closest('[class*=\"slot\"]') || el.parentElement;"
-                    "  return node ? node.innerText : '';"
-                    "}"
-                )
-            except Exception:
-                container_text = ""
-
-            # Skip non-tennis entries
-            if container_text and re.search(r"tennis|court", container_text, re.I):
-                time_m = re.search(r"\b\d{1,2}[:.]\d{2}(?:\s*[ap]m)?\b", container_text, re.I)
-                slots.append({
-                    "date":   date_label,
-                    "time":   time_m.group(0) if time_m else "See website",
-                    "court":  "Indoor Tennis Court",
-                    "url":    page.url,
-                })
-
     return slots
+
+
+async def _get_slots_for_activity(
+    page: Page,
+    activity_name: str,
+    days_ahead: int,
+) -> list[dict]:
+    """Navigate to an activity and collect all available slots within days_ahead."""
+    all_slots: list[dict] = []
+
+    if not await _navigate_to_activity(page, activity_name):
+        return all_slots
+
+    today = datetime.today().date()
+    cutoff = today + timedelta(days=days_ahead)
+
+    # The grid shows one week at a time (Mon–Sun).
+    # We may need to check the current week and possibly the next.
+    weeks_checked = 0
+    max_weeks = (days_ahead // 7) + 2  # safety limit
+
+    while weeks_checked < max_weeks:
+        html = await page.content()
+        current_url = page.url
+        week_slots = _parse_grid(html, activity_name, current_url)
+
+        # Filter to slots within our date range
+        for slot in week_slots:
+            try:
+                slot_date = datetime.strptime(slot["date"], "%A %d %B %Y").date()
+                if today <= slot_date < cutoff:
+                    all_slots.append(slot)
+            except ValueError:
+                all_slots.append(slot)  # include if we can't parse
+
+        # Check if current week extends beyond our cutoff
+        # (read the displayed date range from the page)
+        date_range_el = await page.query_selector("#ctl00_MainContent_startDate")
+        if date_range_el:
+            range_text = await date_range_el.inner_text()  # e.g. "Mon 09 Mar to Sun 15 Mar"
+        else:
+            break
+
+        # Extract the "to" date
+        to_match = re.search(r"to\s+\w+\s+(\d+)\s+(\w+)", range_text)
+        if to_match:
+            try:
+                year = datetime.today().year
+                end_date = datetime.strptime(
+                    f"{to_match.group(1)} {to_match.group(2)} {year}", "%d %b %Y"
+                ).date()
+                if end_date >= cutoff:
+                    break  # covered enough days
+            except ValueError:
+                break
+
+        # Navigate forward one week
+        try:
+            await page.click("#ctl00_MainContent_dateForward1")
+            await page.wait_for_load_state("networkidle", timeout=15000)
+        except Exception:
+            break
+
+        weeks_checked += 1
+
+    return all_slots
 
 
 async def get_available_slots(
@@ -125,18 +198,23 @@ async def get_available_slots(
         page = await context.new_page()
 
         if not await _login(page, ea_email, ea_password):
+            print("[scraper] Login failed — check credentials in .env")
             await browser.close()
             return all_slots
 
-        print("[scraper] Authenticated. Checking availability…")
-        today = datetime.today().date()
+        print("[scraper] Logged in successfully.")
 
-        for i in range(days_ahead):
-            target = today + timedelta(days=i)
-            print(f"[scraper]  → {target.strftime('%a %d %b %Y')}", end="  ")
-            day_slots = await _slots_for_date(page, target)
-            print(f"{len(day_slots)} slot(s) found")
-            all_slots.extend(day_slots)
+        for activity in INDOOR_ACTIVITIES:
+            print(f"[scraper] Checking: {activity}")
+            # Return to home between activities
+            await page.goto(
+                "https://book.everyoneactive.com/Connect/memberHomePage.aspx",
+                wait_until="networkidle",
+                timeout=20000,
+            )
+            slots = await _get_slots_for_activity(page, activity, days_ahead)
+            print(f"[scraper]   → {len(slots)} available slot(s)")
+            all_slots.extend(slots)
 
         await browser.close()
 
