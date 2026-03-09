@@ -3,6 +3,8 @@ Core monitor — ties together the scraper and notifier.
 Tracks previously seen slots to avoid duplicate alerts.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import os
@@ -30,7 +32,7 @@ def _save_seen(seen: set[str]) -> None:
 
 
 def _slot_key(slot: dict) -> str:
-    return f"{slot['date']}|{slot['time']}|{slot['court']}"
+    return f"{slot['date']}|{slot['time']}|{slot['activity']}"
 
 
 def run_check(config: dict) -> int:

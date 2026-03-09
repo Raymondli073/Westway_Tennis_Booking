@@ -51,6 +51,12 @@ requirements.txt         # Python dependencies
 - Gmail SMTP requires a 16-char App Password (not your normal Gmail password)
   → Google Account → Security → 2-Step Verification → App Passwords
 
+## Slot Data Fields
+Each slot dict: `{date, time, activity, courts_note, url}`
+- `activity`: "Indoor Tennis (50 Mins)" or "Indoor Tennis Early Bird"
+- `courts_note`: fixed string — court numbers are only assigned at checkout, not shown in the grid
+- Slots are sorted chronologically (date then time) before emailing
+
 ## Booking System Navigation (Discovered via Playwright inspection)
 - Login: `mrmLogin.aspx?siteId=0162` — fields: `#ctl00_MainContent_InputLogin`, `#ctl00_MainContent_InputPassword`
 - Activity group: `input[value='Tennis Courts']` → ActivityID=162TENNIS

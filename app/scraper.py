@@ -99,10 +99,11 @@ def _parse_grid(page_html: str, activity_name: str, booking_url: str) -> list[di
             date_label = raw_date
 
         slots.append({
-            "date":     date_label,
-            "time":     raw_time,
-            "court":    activity_name,
-            "url":      booking_url,
+            "date":        date_label,
+            "time":        raw_time,
+            "activity":    activity_name,
+            "courts_note": "Available (court assigned at checkout)",
+            "url":         booking_url,
         })
 
     return slots
