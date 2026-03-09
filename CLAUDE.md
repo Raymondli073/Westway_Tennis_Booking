@@ -58,6 +58,8 @@ Each slot dict: `{date, time, activity, courts_note, url}`
 - Slots are deduplicated by (date, time) before emailing — overlapping slots from different activities are merged
 - Slots are sorted chronologically (date then time) before emailing
 - Email subject and count reflect distinct slots only
+- Consecutive hourly slots (≥2 in a row on same date) are highlighted in amber in the email
+- Consecutive blocks are listed in the subject line, e.g. "incl. Thu 12 Mar 15:00–18:00"
 
 ## Booking System Navigation (Discovered via Playwright inspection)
 - Login: `mrmLogin.aspx?siteId=0162` — fields: `#ctl00_MainContent_InputLogin`, `#ctl00_MainContent_InputPassword`
